@@ -300,7 +300,14 @@
       }
     </script>
 
-    <!-- Game Scripts -->
+    <!-- Add FXAA shader dependencies before game scripts -->
+    <script src="/libs/EffectComposer.js"></script>
+    <script src="/libs/RenderPass.js"></script>
+    <script src="/libs/ShaderPass.js"></script>
+    <script src="/libs/CopyShader.js"></script>
+    <script src="/libs/FXAAShader.js"></script>
+
+    <!-- Game scripts -->
     <script src="/js/input.js"></script>
     <script src="/js/physics.js"></script>
     <script src="/js/objects.js"></script>

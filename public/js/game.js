@@ -48,20 +48,26 @@ class Game {
         this.scene.background = new THREE.Color(0x87ceeb); // Sky blue
         
         // Create camera - positioned at origin initially
-        // The InputController will handle positioning it relative to the player
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        // Create renderer
+        // Create renderer - ultra simplified
         this.renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: false
+            antialias: false,
+            alpha: false,
+            precision: 'lowp' // Use low precision for better performance
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(0.6); // Reduce to 60% of device pixel ratio
+        
+        // Use very basic shadows
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.type = THREE.BasicShadowMap;
         
         // Add renderer to DOM
         document.getElementById('game-container').appendChild(this.renderer.domElement);
+        
+        // Setup FXAA for edge smoothing (very performance-friendly)
+        this.setupFXAA();
         
         // Create clock for animation
         this.clock = new THREE.Clock();
@@ -89,46 +95,65 @@ class Game {
         this.animate();
     }
     
+    // Setup FXAA post-processing for edge smoothing
+    setupFXAA() {
+        // Create effect composer
+        this.composer = new THREE.EffectComposer(this.renderer);
+        
+        // Add render pass
+        const renderPass = new THREE.RenderPass(this.scene, this.camera);
+        this.composer.addPass(renderPass);
+        
+        // Add FXAA pass (very lightweight anti-aliasing)
+        const fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+        
+        // Set resolution inverse based on pixel ratio
+        const pixelRatio = this.renderer.getPixelRatio();
+        fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
+        fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
+        
+        // Make this the last pass
+        fxaaPass.renderToScreen = true;
+        
+        this.composer.addPass(fxaaPass);
+    }
+    
     createLighting() {
-        // Ambient light
-        const ambientLight = new THREE.AmbientLight(0x606060, 1.2); // Brighter ambient light with higher intensity
+        // Very bright ambient light for flat lighting (no ray tracing)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2.3);
         this.scene.add(ambientLight);
         
-        // Add hemisphere light for better environmental lighting
-        const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x556B2F, 0.8); // Sky blue and dark olive green
-        this.scene.add(hemiLight);
+        // Simple directional light with basic shadows
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(100, 200, 100);
         
-        // Directional light (sun)
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(100, 200, 100); // Higher position
+        // Minimal shadow setup - very simple and performant
         directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.mapSize.width = 512; // Very low resolution
+        directionalLight.shadow.mapSize.height = 512; // Very low resolution
         directionalLight.shadow.camera.near = 0.5;
-        directionalLight.shadow.camera.far = 500; // Reduced far plane
-        directionalLight.shadow.camera.left = -150; // Reduced shadow area
-        directionalLight.shadow.camera.right = 150;
-        directionalLight.shadow.camera.top = 150;
-        directionalLight.shadow.camera.bottom = -150;
+        directionalLight.shadow.camera.far = 200;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        
         this.scene.add(directionalLight);
     }
     
     createGround() {
-        // Create floor with fixed size of 120x120
+        // Create simplified floor
         const groundSize = 180;
         const floorGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-        const floorMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x556b2f,  // Dark olive green
-            roughness: 0.8,
-            metalness: 0.2
-        });
+        const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x556b2f }); // Basic material
         const floor = new THREE.Mesh(floorGeometry, floorMaterial);
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         this.scene.add(floor);
+        this.ground = floor;
         
-        // Add grid for visual reference - adjusted to match ground size
-        const gridHelper = new THREE.GridHelper(groundSize, 24, 0x000000, 0x000000);
+        // Simplified grid with fewer lines
+        const gridHelper = new THREE.GridHelper(groundSize, 18, 0x000000, 0x000000);
         gridHelper.material.opacity = 0.2;
         gridHelper.material.transparent = true;
         this.scene.add(gridHelper);
@@ -428,6 +453,20 @@ class Game {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        // Update FXAA resolution when window is resized
+        if (this.composer) {
+            this.composer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Find FXAA pass and update resolution
+            this.composer.passes.forEach(pass => {
+                if (pass.material && pass.material.uniforms && pass.material.uniforms['resolution']) {
+                    const pixelRatio = this.renderer.getPixelRatio();
+                    pass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
+                    pass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
+                }
+            });
+        }
     }
     
     startGame(gameData) {
@@ -597,18 +636,37 @@ class Game {
         // Skip if too long between frames (e.g. tab was inactive)
         if (deltaTime > 1000) return;
         
+        // Reduce render frequency significantly when not focused or game not started
+        const isDocumentFocused = document.hasFocus();
+        if (!isDocumentFocused && !this.gameStarted) {
+            // Render at much lower frequency when tab is not focused
+            if (now % 8 !== 0) return; // Only render every 8th frame (1/8 framerate)
+        } else if (!this.gameStarted) {
+            // Reduce framerate in menu screens
+            if (now % 2 !== 0) return; // Half framerate
+        }
+        
         // Update local player
         if (this.gameStarted) {
             this.updateLocalPlayer(deltaTime);
             this.updateGameObjects();
         }
         
-        // Render the scene
-        this.renderer.render(this.scene, this.camera);
+        // Render using FXAA composer instead of renderer directly
+        if (this.composer) {
+            this.composer.render();
+        } else {
+            // Fallback to direct rendering if composer not available
+            this.renderer.render(this.scene, this.camera);
+        }
     }
 
     render() {
-        this.renderer.render(this.scene, this.camera);
+        if (this.composer) {
+            this.composer.render();
+        } else {
+            this.renderer.render(this.scene, this.camera);
+        }
     }
 }
 

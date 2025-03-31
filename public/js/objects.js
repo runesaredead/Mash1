@@ -42,34 +42,33 @@ class ObjectsController {
     }
     
     createHammerGeometry() {
-        // Create the hammer head (Box)
-        const headGeometry = new THREE.BoxGeometry(1.2, 0.7, 0.6);
+        // Create the hammer head (Box) - further simplified with fewer segments
+        const headGeometry = new THREE.BoxGeometry(1.2, 0.7, 0.6, 1, 1, 1);
         const head = new THREE.Mesh(headGeometry, this.hammerMaterial);
         head.position.set(0, 0, 0);
-        head.castShadow = true;
+        head.castShadow = true; // Only head casts shadows
         
-        // Create the hammer handle (Cylinder)
-        const handleGeometry = new THREE.CylinderGeometry(0.12, 0.12, 1.7, 8);
+        // Create the hammer handle (Cylinder) - simplified
+        const handleGeometry = new THREE.CylinderGeometry(0.12, 0.12, 1.7, 4);
         const handle = new THREE.Mesh(handleGeometry, this.hammerHandleMaterial);
         handle.position.set(0, -0.9, 0);
-        handle.castShadow = true;
+        handle.castShadow = false;
         
         // Create a small cylinder at the end of the handle
-        const endGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 8);
+        const endGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 4);
         const end = new THREE.Mesh(endGeometry, this.hammerMaterial);
         end.position.set(0, -1.75, 0);
-        end.castShadow = true;
+        end.castShadow = false;
         
         // Add to group
         this.hammerGeometry.add(head);
         this.hammerGeometry.add(handle);
         this.hammerGeometry.add(end);
         
-        // Rotate for better orientation - more explicit rotation
+        // Rotate for better orientation
         this.hammerGeometry.rotation.set(Math.PI / 2, 0, 0);
         
-        // Set initial rotation to zero position
-        // Ensure the hammer correctly responds to rotation commands
+        // Set initial rotation
         this.hammerGeometry.userData.initialRotation = {
             x: Math.PI / 2,
             y: 0,
@@ -87,13 +86,13 @@ class ObjectsController {
         const colorIndex = parseInt(id.replace(/[^0-9]/g, '')) % this.playerColors.length;
         const color = this.playerColors[colorIndex];
         
-        // Create player material with assigned color
-        const material = new THREE.MeshPhongMaterial({ color });
+        // Create player material with assigned color - simpler material
+        const material = new THREE.MeshBasicMaterial({ color });
         
         // Create player body (for now a simple box)
         const body = new THREE.Mesh(this.playerGeometry, material);
         body.castShadow = true;
-        body.receiveShadow = true;
+        body.receiveShadow = false; // Players don't need to receive shadows
         
         // Add body to group for future animation support
         const playerMesh = new THREE.Group();
@@ -284,70 +283,37 @@ class ObjectsController {
         
         // Special handling for trampolines
         if (obstacle.type === 'trampoline') {
-            // Create trampoline with frame and bouncy surface
+            // Create simplified trampoline with fewer objects
             const group = new THREE.Group();
             
-            // Create the base/frame (slightly larger than the bouncy surface)
+            // Create the base/frame
             const baseGeometry = new THREE.BoxGeometry(
                 obstacle.size.width,
                 obstacle.size.height * 0.5,
                 obstacle.size.depth
             );
             
-            const baseMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x333333, // Dark gray for the frame
-                transparent: false,
-                opacity: 1.0
-            });
+            const baseMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
             
             const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
-            baseMesh.position.y = -obstacle.size.height * 0.25; // Position at bottom of obstacle
+            baseMesh.position.y = -obstacle.size.height * 0.25;
+            baseMesh.castShadow = true;
+            baseMesh.receiveShadow = false;
             group.add(baseMesh);
             
-            // Create the bouncy surface (slightly smaller than the frame)
+            // Create the bouncy surface
             const surfaceGeometry = new THREE.BoxGeometry(
                 obstacle.size.width * 0.9,
                 obstacle.size.height * 0.2,
                 obstacle.size.depth * 0.9
             );
             
-            const surfaceMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x0000FF, // Blue for the bounce surface
-                transparent: false,
-                opacity: 1.0,
-                emissive: 0x0000AA, // Slight glow
-                emissiveIntensity: 0.3
-            });
+            const surfaceMaterial = new THREE.MeshBasicMaterial({ color: 0x0000FF });
             
             const surfaceMesh = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
-            surfaceMesh.position.y = obstacle.size.height * 0.1; // Position at top of obstacle
+            surfaceMesh.position.y = obstacle.size.height * 0.1;
+            surfaceMesh.castShadow = false;
             group.add(surfaceMesh);
-            
-            // Create grid pattern on the surface
-            const gridSize = 5; // Number of grid lines in each direction
-            const gridMaterial = new THREE.LineBasicMaterial({ color: 0x00FFFF });
-            
-            for (let i = 0; i <= gridSize; i++) {
-                const pos = (i / gridSize) - 0.5;
-                
-                // X grid lines
-                const xGeometry = new THREE.BufferGeometry();
-                xGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
-                    pos * obstacle.size.width * 0.9, obstacle.size.height * 0.11, -obstacle.size.depth * 0.45,
-                    pos * obstacle.size.width * 0.9, obstacle.size.height * 0.11, obstacle.size.depth * 0.45
-                ], 3));
-                const xLine = new THREE.Line(xGeometry, gridMaterial);
-                group.add(xLine);
-                
-                // Z grid lines
-                const zGeometry = new THREE.BufferGeometry();
-                zGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
-                    -obstacle.size.width * 0.45, obstacle.size.height * 0.11, pos * obstacle.size.depth * 0.9,
-                    obstacle.size.width * 0.45, obstacle.size.height * 0.11, pos * obstacle.size.depth * 0.9
-                ], 3));
-                const zLine = new THREE.Line(zGeometry, gridMaterial);
-                group.add(zLine);
-            }
             
             // Position the entire trampoline group
             group.position.copy(new THREE.Vector3(
@@ -374,20 +340,18 @@ class ObjectsController {
                 obstacle.size.depth
             );
             
-            // Create material based on type
+            // Create material based on type - simpler materials
             let material;
             if (obstacle.type === 'wall') {
-                // Check if opacity is specified, otherwise use default semi-transparent walls
                 const isOpaque = obstacle.opacity === 1.0;
-                material = new THREE.MeshPhongMaterial({ 
-                    color: isOpaque ? 0x444444 : 0x808080, // Darker color for opaque walls
+                material = new THREE.MeshBasicMaterial({ 
+                    color: isOpaque ? 0x444444 : 0x808080,
                     transparent: !isOpaque,
                     opacity: obstacle.opacity !== undefined ? obstacle.opacity : 0.7
                 });
             } else {
-                // Use specified color if available, otherwise generate random color
                 if (obstacle.color !== undefined) {
-                    material = new THREE.MeshPhongMaterial({ 
+                    material = new THREE.MeshBasicMaterial({ 
                         color: obstacle.color,
                         transparent: obstacle.opacity !== 1.0,
                         opacity: obstacle.opacity !== undefined ? obstacle.opacity : 1.0
@@ -399,7 +363,7 @@ class ObjectsController {
                     const lightness = 0.5;
                     
                     const color = new THREE.Color().setHSL(hue, saturation, lightness);
-                    material = new THREE.MeshPhongMaterial({ color });
+                    material = new THREE.MeshBasicMaterial({ color });
                 }
             }
             
@@ -419,9 +383,10 @@ class ObjectsController {
                 obstacle.rotation.z || 0
             ));
             
-            // Enable shadows
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
+            // Enable shadows for large obstacles only
+            const isLarge = obstacle.size.width > 5 || obstacle.size.height > 5 || obstacle.size.depth > 5;
+            mesh.castShadow = isLarge;
+            mesh.receiveShadow = false;
             
             // Add to scene
             this.game.scene.add(mesh);

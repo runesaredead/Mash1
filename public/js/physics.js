@@ -10,23 +10,14 @@ class PhysicsController {
         this.playerRadius = 0.55;
         this.hammerRadius = 0.75;
         
-        // Raycaster for ground checking
-        this.raycaster = new THREE.Raycaster();
-        this.downDirection = new THREE.Vector3(0, -1, 0);
+        // Simple ground check value - height at which we consider an entity on ground
+        this.groundLevel = 0.1;
     }
     
-    // Check if entity is on ground
-    isOnGround(position, height = 2) {
-        this.raycaster.set(
-            new THREE.Vector3(position.x, position.y, position.z),
-            this.downDirection
-        );
-        
-        // Check intersection with ground
-        const intersects = this.raycaster.intersectObject(this.game.ground);
-        
-        // If intersection distance is less than height/2 + small buffer, entity is on ground
-        return intersects.length > 0 && intersects[0].distance < (height / 2) + 0.1;
+    // Check if entity is on ground - simplified with no raycasting
+    isOnGround(position, height = 2, entityId = null) {
+        // Simple check for ground contact
+        return position.y <= (height / 2) + this.groundLevel;
     }
     
     // Apply gravity to entity
@@ -53,7 +44,7 @@ class PhysicsController {
         entity.position.y += entity.velocity.y * deltaTime;
         entity.position.z += entity.velocity.z * deltaTime;
         
-        // Check ground collision
+        // Check ground collision - simplified
         if (entity.position.y < entity.height / 2) {
             entity.position.y = entity.height / 2;
             entity.velocity.y = 0;
