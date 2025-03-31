@@ -14,7 +14,11 @@ const io = socketIO(server, {
         methods: ["GET", "POST"],
         allowedHeaders: ["*"],
         credentials: true
-    }
+    },
+    // Add transports and pingTimeout configurations to improve connection reliability
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
 // Serve static files
@@ -29,6 +33,16 @@ app.use((req, res, next) => {
         return res.sendStatus(200);
     }
     next();
+});
+
+// Health check route for Render
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// Root route for basic health check
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Game state
@@ -619,4 +633,19 @@ setInterval(() => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
     console.log(`Hammer Dodgeball server running on port ${PORT}`);
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+    });
+    
+    // Force close after 10s if server hasn't closed gracefully
+    setTimeout(() => {
+        console.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
 }); 

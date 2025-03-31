@@ -45,12 +45,31 @@ The game is configured to be deployable on Render.com or similar platforms.
    - Environment: Node
    - Environment Variables: None required by default, PORT is automatically set by Render
 
-## Troubleshooting
+#### Alternative Deployment Using render.yaml
 
-If you encounter the "Unable to connect to the server" error when playing the deployed version:
-1. Check that both the client and server are deployed correctly
-2. Verify that there are no CORS issues
-3. Confirm that Socket.IO is properly connecting using the correct server URL
+This project includes a `render.yaml` configuration file, which allows you to deploy directly from the Render dashboard:
+
+1. Log into your Render account
+2. Go to "Blueprints" in the dashboard
+3. Click "New Blueprint Instance"
+4. Connect to your GitHub repository
+5. Render will automatically detect the render.yaml file and configure the service
+
+### Troubleshooting Render Deployment Issues
+
+If you encounter 502 Bad Gateway errors:
+1. Check the Render logs for any startup errors
+2. Ensure the Node.js version is compatible (Render uses Node 14 by default)
+3. Verify that your app is properly listening on the PORT environment variable
+4. Make sure there are no errors in server.js that might prevent startup
+
+## Socket.IO Connection Troubleshooting
+
+If the client can't connect to the server:
+1. Check browser console for any connection errors
+2. Verify that the Socket.IO URL is correct (should use the same origin when deployed)
+3. Check that CORS is properly configured on the server
+4. Ensure websockets are enabled in your Render service settings
 
 ## License
 
