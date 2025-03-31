@@ -449,34 +449,14 @@ class ObjectsController {
             // Store original surface position
             const originalY = surfaceMesh.position.y;
             
-            // Animation function
-            const animate = () => {
-                const elapsed = Date.now() - obstacle.lastBounce;
-                const duration = 800; // Animation duration in ms
-                
-                if (elapsed < duration) {
-                    // Compress down then bounce back up
-                    // Use a sine wave to create a natural bounce effect
-                    const phase = elapsed / duration * Math.PI;
-                    const compression = Math.sin(phase) * obstacle.size.height * 0.3;
-                    
-                    if (elapsed < duration / 2) {
-                        // Compress phase (first half of animation)
-                        surfaceMesh.position.y = originalY - compression;
-                    } else {
-                        // Extend phase (second half of animation)
-                        surfaceMesh.position.y = originalY + compression * 0.5;
-                    }
-                    
-                    requestAnimationFrame(animate);
-                } else {
-                    // Reset to original position
-                    surfaceMesh.position.y = originalY;
-                    obstacle.isAnimating = false;
-                }
-            };
+            // Simplified animation - just move down then up
+            surfaceMesh.position.y = originalY - 0.2;
             
-            animate();
+            // Reset position after a short delay
+            setTimeout(() => {
+                surfaceMesh.position.y = originalY;
+                obstacle.isAnimating = false;
+            }, 300);
         };
     }
     
