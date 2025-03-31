@@ -14,8 +14,16 @@ class NetworkController {
         console.log('NetworkController connecting to server...');
         // Create socket connection
         try {
-            // Connect to the server with the new port
-            this.socket = io('http://localhost:3001');
+            // Get the current hostname to determine server URL
+            const currentUrl = window.location.hostname;
+            const isLocal = currentUrl === 'localhost' || currentUrl === '127.0.0.1';
+            
+            // Use localhost for local development, window.location.origin for production
+            const serverUrl = isLocal ? 'http://localhost:3001' : window.location.origin;
+            
+            // Connect to the server
+            console.log('Connecting to server at:', serverUrl);
+            this.socket = io(serverUrl);
             console.log('Socket.io instance created:', !!this.socket);
             
             // Add connection timeout
