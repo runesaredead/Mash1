@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+        }
+        #status {
+            font-size: 18px;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        #logs {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        button {
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Socket.IO Connection Test</h1>
+    <div id="status">Connecting...</div>
+    
+    <div>
+        <button id="connect-btn">Connect</button>
+        <button id="disconnect-btn">Disconnect</button>
+        <button id="ping-btn">Send Ping</button>
+    </div>
+    
+    <h2>Connection Logs</h2>
+    <div id="logs"></div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const pingBtn = document.getElementById('ping-btn');
+        
+        let socket = null;
+        
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            logsDiv.appendChild(entry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        function connect() {
+            if (socket && socket.connected) {
+                log('Already connected', 'warning');
+                return;
+            }
+            
+            log('Attempting to connect to server...');
+            
+            // Try to connect to the server
+            socket = io(window.location.origin, {
+                transports: ['websocket', 'polling'],
+                upgrade: true,
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000,
+                autoConnect: true,
+                forceNew: true
+            });
+            
+            socket.on('connect', () => {
+                statusDiv.innerHTML = 'Connected to server! Socket ID: ' + socket.id;
+                statusDiv.style.color = 'green';
+                statusDiv.style.backgroundColor = '#e8f5e9';
+                statusDiv.style.padding = '10px';
+                log('Connected to server with ID: ' + socket.id, 'success');
+            });
+            
+            socket.on('connect_error', (err) => {
+                statusDiv.innerHTML = 'Connection error: ' + err.message;
+                statusDiv.style.color = 'red';
+                statusDiv.style.backgroundColor = '#ffebee';
+                statusDiv.style.padding = '10px';
+                log('Connection error: ' + err.message, 'error');
+                console.error('Connection error:', err);
+            });
+            
+            socket.on('disconnect', (reason) => {
+                statusDiv.innerHTML = 'Disconnected: ' + reason;
+                statusDiv.style.color = 'orange';
+                statusDiv.style.backgroundColor = '#fff3e0';
+                statusDiv.style.padding = '10px';
+                log('Disconnected: ' + reason, 'warning');
+            });
+            
+            socket.on('reconnect_attempt', (attempt) => {
+                log(`Reconnection attempt ${attempt}...`, 'warning');
+            });
+            
+            socket.on('pong', () => {
+                log('Received pong from server', 'success');
+            });
+            
+            // Add event for any custom messages
+            socket.onAny((event, ...args) => {
+                log(`Received event '${event}': ${JSON.stringify(args)}`, 'info');
+            });
+        }
+        
+        function disconnect() {
+            if (!socket || !socket.connected) {
+                log('Not connected', 'warning');
+                return;
+            }
+            
+            socket.disconnect();
+            log('Manually disconnected from server');
+        }
+        
+        function sendPing() {
+            if (!socket || !socket.connected) {
+                log('Cannot ping: not connected', 'error');
+                return;
+            }
+            
+            socket.emit('ping');
+            log('Sent ping to server');
+        }
+        
+        // Event listeners
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        pingBtn.addEventListener('click', sendPing);
+        
+        // Auto-connect on page load
+        connect();
+    </script>
+</body>
+</html> 
