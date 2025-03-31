@@ -202,7 +202,7 @@ class GameEngine {
             color: 0x0000FF, // Blue color for trampolines
             isTrampoline: true,
             bounceFactor: 4.0, // Standard bounce factor
-            bounceVelocity: 30.0, // Increased bounce velocity (was 20.0)
+            bounceVelocity: 30.0, // Flat bounce velocity for all trampolines
             lastBounceTime: 0 // To prevent repeated bounces in short timeframe
         });
     }
@@ -334,7 +334,7 @@ class GameEngine {
                 color: 0x0000FF, // Blue color for trampolines
                 isTrampoline: true,
                 bounceFactor: 4.0, // Standard bounce factor
-                bounceVelocity: 30.0, // Increased bounce velocity (was 20.0)
+                bounceVelocity: 30.0, // Flat bounce velocity for all trampolines
                 lastBounceTime: 0 // To prevent repeated bounces in short timeframe
             });
         });
@@ -358,7 +358,7 @@ class GameEngine {
                 color: 0x0000FF, // Blue color for trampolines
                 isTrampoline: true,
                 bounceFactor: 4.0, // Standard bounce factor
-                bounceVelocity: 30.0, // Increased bounce velocity (was 20.0)
+                bounceVelocity: 30.0, // Flat bounce velocity for all trampolines
                 lastBounceTime: 0 // To prevent repeated bounces in short timeframe
             });
         });
@@ -2211,31 +2211,16 @@ class GameEngine {
                         // Check bounce cooldown to prevent excessive bounces
                         const now = Date.now();
                         if (!obstacle.lastBounceTime || now - obstacle.lastBounceTime > 300) { // 300ms cooldown
-                            // Use fixed bounce velocity if provided, otherwise calculate
-                            let bounceVelocity = obstacle.bounceVelocity || 20.0;
+                            // Simplified: Use fixed bounce velocity regardless of conditions
+                            const bounceVelocity = 30.0;
                             
-                            // Update player physics
+                            // Update player physics with fixed bounce
                             player.velocity.y = bounceVelocity;
                             player.onGround = false;
                             player.isJumping = true;
                             
-                            // Trigger bounce animation on the obstacle if it has the function
-                            if (obstacle.mesh && obstacle.triggerBounce) {
-                                obstacle.triggerBounce();
-                            }
-                            
                             // Update last bounce time
                             obstacle.lastBounceTime = now;
-                            
-                            // Log bounce event (reduced to only show key information)
-                            console.log("TRAMPOLINE BOUNCE", {
-                                playerPos: {
-                                    x: Math.round(player.position.x * 100) / 100,
-                                    y: Math.round(player.position.y * 100) / 100,
-                                    z: Math.round(player.position.z * 100) / 100
-                                },
-                                bounceVelocity
-                            });
                         }
                     }
                     continue; // Skip the rest of the processing for this obstacle
